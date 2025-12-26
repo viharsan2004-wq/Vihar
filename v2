@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Delivery Receiver (Enhanced)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+  </style>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- Google Maps -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY"></script>
+  <!-- MarkerClusterer library -->
+  <script src="https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/markerclusterer.js"></script>
+</head>
+<body>
+  <div id="map"></div>
+
+<script>
+  // ---------- Firebase Config ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyAiHk4HTo8mQUb_fRZx1iRZXoDXecbgV_Q",
+    authDomain: "fooddeliverytracker-ac56e.firebaseapp.com",
+    databaseURL: "https://fooddeliverytracker-ac56e-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "fooddeliverytracker-ac56e",
+    storageBucket: "fooddeliverytracker-ac56e.appspot.com",
+    messagingSenderId: "1085469456700",
+    appId: "1:1085469456700:web:df8abcb9baedfc39dd4639"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // ---------- Initialize Map ----------
+  let map;
+  const markers = {}; // key: orderId_boyId
+  const markerArray = []; // for clustering
+  const orderColors = {}; // assign a color to each order
+
+  const colors = ["red","blue","green","orange","purple","yellow","pink","brown"];
+
+  function getColor(orderId){
+    if(!orderColors[orderId]){
+      orderColors[orderId] = colors[Object.keys(orderColors).length % colors.length];
+    }
+    return orderColors[orderId];
+  }
+
+  function initMap() {
+    map = new google.maps.Map(document.getElementById('map'), {
+      center: {lat: 6.9271, lng: 79.8612}, // Colombo default
+      zoom: 12
+    });
+  }
+
+  // ---------- Track Orders ----------
+  function trackOrders() {
+    db.ref('orders').on('value', snapshot => {
+      const orders = snapshot.val();
+      if (!orders) return;
+
+      for (const orderId in orders) {
+        const deliveryBoys = orders[orderId];
+        for (const boyId in deliveryBoys) {
+          const boy = deliveryBoys[boyId];
+          if (!boy.location) continue;
+
+          const lat = boy.location.lat;
+          const lng = boy.location.lng;
+          const key = orderId + "_" + boyId;
+
+          const color = getColor(orderId);
+
+          if (markers[key]) {
+            markers[key].setPosition({lat, lng});
+          } else {
+            const marker = new google.maps.Marker({
+              position: {lat, lng},
+              map: map,
+              title: `${boy.name || boyId} (Order: ${orderId})`,
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 8,
+                fillColor: color,
+                fillOpacity: 1,
+                strokeWeight: 1,
+                strokeColor: "white"
+              }
+            });
+
+            const info = new google.maps.InfoWindow({
+              content: `<strong>${boy.name || boyId}</strong><br>Order: ${orderId}<br>Phone: ${boy.phone || ''}`
+            });
+
+            marker.addListener('click', () => info.open(map, marker));
+
+            markers[key] = marker;
+            markerArray.push(marker);
+          }
+        }
+      }
+
+      // Apply clustering
+      new MarkerClusterer({ markers: markerArray, map: map });
+    });
+  }
+
+  // ---------- Initialize ----------
+  window.onload = function() {
+    initMap();
+    trackOrders();
+  };
+</script>
+</body>
+</html>
