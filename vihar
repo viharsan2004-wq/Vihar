@@ -1,1 +1,67 @@
-date
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Delivery Sender</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+  <h2>Delivery Tracking (Sender)</h2>
+  <p>Status: <span id="status">Waiting...</span></p>
+  <p>Last Updated: <span id="timestamp">--</span></p>
+
+<script>
+  // ---------- Firebase Config ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyAiHk4HTo8mQUb_fRZx1iRZXoDXecbgV_Q",
+    authDomain: "fooddeliverytracker-ac56e.firebaseapp.com",
+    databaseURL: "https://fooddeliverytracker-ac56e-default-rtdb.firebaseio.com/",
+    projectId: "fooddeliverytracker-ac56e",
+    storageBucket: "fooddeliverytracker-ac56e.appspot.com",
+    messagingSenderId: "1085469456700",
+    appId: "1:1085469456700:web:df8abcb9baedfc39dd4639"
+  };
+
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // ---------- Order ID ----------
+  const orderId = "order123"; // Change per delivery
+
+  // ---------- Send Location ----------
+  function sendLocation(position) {
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
+    const time = Date.now();
+
+    db.ref('orders/' + orderId + '/location').set({
+      lat: lat,
+      lng: lng,
+      timestamp: time
+    }).then(() => {
+      document.getElementById('status').innerText = `Location sent: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      document.getElementById('timestamp').innerText = new Date(time).toLocaleTimeString();
+    }).catch((err) => {
+      document.getElementById('status').innerText = 'Error sending location: ' + err.message;
+    });
+  }
+
+  function locationError(err) {
+    document.getElementById('status').innerText = 'Error getting location: ' + err.message;
+  }
+
+  // ---------- Watch GPS ----------
+  if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(sendLocation, locationError, {
+      enableHighAccuracy: true,
+      maximumAge: 5000,
+      timeout: 10000
+    });
+  } else {
+    document.getElementById('status').innerText = 'Geolocation not supported';
+  }
+</script>
+</body>
+</html>
